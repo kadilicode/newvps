@@ -11,7 +11,7 @@ define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
 
 define('SITE_NAME', 'KADILI NET');
-define('SITE_URL', 'http://199.192.21.242');
+define('SITE_URL', 'https://kadilihotspot.online');
 define('SITE_LOGO', 'https://i.ibb.co/6JgKgFW1/grok-image-1771875696946-removebg-preview.webp');
 
 // PalmPesa
