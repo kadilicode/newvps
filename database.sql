@@ -1,15 +1,12 @@
 -- ============================================
--- KADILI NET - Database Schema
+-- KADILI NET v4 - Clean Database Schema
 -- Domain: kadilihotspot.online
 -- Created by KADILI DEV
 -- ============================================
 
-CREATE DATABASE IF NOT EXISTS kadili_net CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE kadili_net;
+SET FOREIGN_KEY_CHECKS = 0;
 
--- ============================================
--- ADMIN / SYSTEM SETTINGS
--- ============================================
+-- 1. SETTINGS TABLE
 CREATE TABLE IF NOT EXISTS `settings` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `setting_key` VARCHAR(100) NOT NULL UNIQUE,
@@ -17,7 +14,8 @@ CREATE TABLE IF NOT EXISTS `settings` (
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
-INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
+-- Tumia INSERT IGNORE ili isilete kosa ikikuta data ipo
+INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('setup_fee_enabled', '1'),
 ('setup_fee_amount', '150000'),
 ('monthly_fee', '10000'),
@@ -32,11 +30,11 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('site_name', 'KADILI NET'),
 ('site_domain', 'kadilihotspot.online'),
 ('withdrawal_min', '31500'),
-('withdrawal_fee_percent', '5');
+('withdrawal_fee_percent', '5'),
+('vpn_server_host', 'kadilihotspot.online'),
+('vpn_psk', 'kadili2024vpn');
 
--- ============================================
--- ADMINS
--- ============================================
+-- 2. ADMINS
 CREATE TABLE IF NOT EXISTS `admins` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(100) NOT NULL,
@@ -45,13 +43,10 @@ CREATE TABLE IF NOT EXISTS `admins` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- Password: Use /admin/reset_password.php?key=KadiliReset2024 to set password Kadili@123 on first install
-INSERT INTO `admins` (`name`, `email`, `password`) VALUES
+INSERT IGNORE INTO `admins` (`name`, `email`, `password`) VALUES
 ('KADILI Admin', 'kadiliy17@gmail.com', '$2b$12$VzvgRqcNYCh4z314ghZY9.Tq4pdJNBMpD9KgHQVGW240bilv8VdPm');
 
--- ============================================
--- RESELLERS
--- ============================================
+-- 3. RESELLERS
 CREATE TABLE IF NOT EXISTS `resellers` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(150) NOT NULL,
@@ -78,22 +73,7 @@ CREATE TABLE IF NOT EXISTS `resellers` (
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ============================================
--- OTP VERIFICATION
--- ============================================
-CREATE TABLE IF NOT EXISTS `otp_codes` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `phone` VARCHAR(20) NOT NULL,
-  `code` VARCHAR(10) NOT NULL,
-  `purpose` ENUM('registration','login','reset') DEFAULT 'registration',
-  `used` TINYINT(1) DEFAULT 0,
-  `expires_at` DATETIME NOT NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- ============================================
--- ROUTERS
--- ============================================
+-- 4. ROUTERS (V4 FIXED)
 CREATE TABLE IF NOT EXISTS `routers` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `reseller_id` INT NOT NULL,
@@ -104,7 +84,6 @@ CREATE TABLE IF NOT EXISTS `routers` (
   `password` VARCHAR(255) NOT NULL,
   `vpn_type` ENUM('direct','sstp','l2tp') DEFAULT 'direct',
   `status` ENUM('online','offline','unknown') DEFAULT 'unknown',
-  `last_checked` DATETIME DEFAULT NULL,
   `setup_step` ENUM('none','step1','step2','step3','complete') DEFAULT 'none',
   `vpn_token` VARCHAR(64) DEFAULT NULL,
   `vpn_assigned_ip` VARCHAR(45) DEFAULT NULL,
@@ -122,9 +101,7 @@ CREATE TABLE IF NOT EXISTS `routers` (
   FOREIGN KEY (`reseller_id`) REFERENCES `resellers`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ============================================
--- PACKAGES / PLANS
--- ============================================
+-- 5. PACKAGES
 CREATE TABLE IF NOT EXISTS `packages` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `reseller_id` INT NOT NULL,
@@ -141,9 +118,7 @@ CREATE TABLE IF NOT EXISTS `packages` (
   FOREIGN KEY (`router_id`) REFERENCES `routers`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ============================================
--- VOUCHERS
--- ============================================
+-- 6. VOUCHERS
 CREATE TABLE IF NOT EXISTS `vouchers` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `reseller_id` INT NOT NULL,
@@ -161,9 +136,7 @@ CREATE TABLE IF NOT EXISTS `vouchers` (
   FOREIGN KEY (`router_id`) REFERENCES `routers`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ============================================
--- TRANSACTIONS
--- ============================================
+-- 7. TRANSACTIONS
 CREATE TABLE IF NOT EXISTS `transactions` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `reseller_id` INT NOT NULL,
@@ -181,53 +154,7 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   FOREIGN KEY (`reseller_id`) REFERENCES `resellers`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ============================================
--- WITHDRAWALS
--- ============================================
-CREATE TABLE IF NOT EXISTS `withdrawals` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `reseller_id` INT NOT NULL,
-  `amount` DECIMAL(10,2) NOT NULL,
-  `fee` DECIMAL(10,2) NOT NULL,
-  `net_amount` DECIMAL(10,2) NOT NULL,
-  `phone` VARCHAR(20) NOT NULL,
-  `status` ENUM('pending','approved','rejected') DEFAULT 'pending',
-  `admin_note` TEXT,
-  `processed_at` DATETIME DEFAULT NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`reseller_id`) REFERENCES `resellers`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- ============================================
--- SUBSCRIPTIONS
--- ============================================
-CREATE TABLE IF NOT EXISTS `subscriptions` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `reseller_id` INT NOT NULL,
-  `amount` DECIMAL(10,2) NOT NULL,
-  `months` INT DEFAULT 1,
-  `palmpesa_order_id` VARCHAR(100),
-  `status` ENUM('pending','active','expired') DEFAULT 'pending',
-  `expires_at` DATE,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`reseller_id`) REFERENCES `resellers`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- ============================================
--- ANNOUNCEMENTS
--- ============================================
-CREATE TABLE IF NOT EXISTS `announcements` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `title` VARCHAR(200) NOT NULL,
-  `body` TEXT NOT NULL,
-  `type` ENUM('info','warning','success','danger') DEFAULT 'info',
-  `is_active` TINYINT(1) DEFAULT 1,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- ============================================
--- HOTSPOT USERS (active WiFi sessions)
--- ============================================
+-- 8. HOTSPOT USERS
 CREATE TABLE IF NOT EXISTS `hotspot_users` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `reseller_id` INT NOT NULL,
@@ -245,23 +172,24 @@ CREATE TABLE IF NOT EXISTS `hotspot_users` (
   FOREIGN KEY (`reseller_id`) REFERENCES `resellers`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ============================================
--- PROMO CODES (setup fee discounts)
--- ============================================
-CREATE TABLE IF NOT EXISTS `promo_codes` (
+-- 9. OTHER TABLES (Simplified)
+CREATE TABLE IF NOT EXISTS `otp_codes` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `code` VARCHAR(50) NOT NULL UNIQUE,
-  `discount_percent` TINYINT NOT NULL DEFAULT 100,
-  `max_uses` INT DEFAULT 0,
-  `used_count` INT DEFAULT 0,
-  `is_active` TINYINT(1) DEFAULT 1,
-  `expires_at` DATE DEFAULT NULL,
+  `phone` VARCHAR(20) NOT NULL,
+  `code` VARCHAR(10) NOT NULL,
+  `used` TINYINT(1) DEFAULT 0,
+  `expires_at` DATETIME NOT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- Indexes for performance
-CREATE INDEX idx_reseller_status ON resellers(status);
-CREATE INDEX idx_transactions_status ON transactions(payment_status);
-CREATE INDEX idx_vouchers_status ON vouchers(status);
-CREATE INDEX idx_hotspot_expires ON hotspot_users(expires_at, reminder_sent);
-CREATE INDEX idx_otp_phone ON otp_codes(phone, used);
+CREATE TABLE IF NOT EXISTS `withdrawals` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `reseller_id` INT NOT NULL,
+  `amount` DECIMAL(10,2) NOT NULL,
+  `status` ENUM('pending','approved','rejected') DEFAULT 'pending',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`reseller_id`) REFERENCES `resellers`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+SET FOREIGN_KEY_CHECKS = 1;
+  
